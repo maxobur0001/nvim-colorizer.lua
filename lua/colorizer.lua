@@ -63,7 +63,7 @@ local DEFAULT_OPTIONS = {
 	hsl_fn   = false;        -- CSS hsl() and hsla() functions
 	css      = false;        -- Enable all CSS features: rgb_fn, hsl_fn, names, RGB, RRGGBB
 	css_fn   = false;        -- Enable all CSS *functions*: rgb_fn, hsl_fn
-	glua_fn  = false;        -- Enable GLua *function*
+	glua_fn  = true;        -- Enable GLua *function*
 	-- Available modes: foreground, background
 	mode     = 'background'; -- Set the display mode.
 }
@@ -404,7 +404,7 @@ local function make_matcher(options)
 	local enable_RRGGBBAA = options.css or options.RRGGBBAA
 	local enable_rgb      = options.css or options.css_fns or options.rgb_fn
 	local enable_hsl      = options.css or options.css_fns or options.hsl_fn
-	local enable_glua     = options.glua
+	local enable_glua     = options.glua_fn
 
 	local matcher_key = bor(
 		lshift(enable_names    and 1 or 0, 0),
