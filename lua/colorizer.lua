@@ -63,6 +63,7 @@ local DEFAULT_OPTIONS = {
 	hsl_fn   = false;        -- CSS hsl() and hsla() functions
 	css      = false;        -- Enable all CSS features: rgb_fn, hsl_fn, names, RGB, RRGGBB
 	css_fn   = false;        -- Enable all CSS *functions*: rgb_fn, hsl_fn
+	glua_fn  = false;        -- Enable GLua *function*
 	-- Available modes: foreground, background
 	mode     = 'background'; -- Set the display mode.
 }
@@ -280,11 +281,29 @@ do
 		return match_end - 1, rgb_hex
 	end
 end
-local css_function_parser, rgb_function_parser, hsl_function_parser
+
+local glua_fn = {}
+do
+	local GLUA_COLOR_FN_MINIMUM_LENGTH = #'Color(0,0,0)' - 1
+  function glua_fn.color(line, i)
+		if #line < i + GLUA_COLOR_FN_MINIMUM_LENGTH then return end
+		local r, g, b, match_end = line:sub(i):match("^Color%(%s*(%d+%%?)%s*,%s*(%d+%%?)%s*,%s*(%d+%%?)%s*%)()")
+		if not match_end then return end
+		r = percent_or_hex(r) if not r then return end
+		g = percent_or_hex(g) if not g then return end
+		b = percent_or_hex(b) if not b then return end
+		local rgb_hex = tohex(bor(lshift(r, 16), lshift(g, 8), b), 6)
+		return match_end - 1, rgb_hex
+	end
+
+end
+
+local css_function_parser, rgb_function_parser, hsl_function_parser, glua_function_parser
 do
 	local CSS_FUNCTION_TRIE = Trie {'rgb', 'rgba', 'hsl', 'hsla'}
 	local RGB_FUNCTION_TRIE = Trie {'rgb', 'rgba'}
 	local HSL_FUNCTION_TRIE = Trie {'hsl', 'hsla'}
+  local GLUA_FUNCTION_TRIE = Trie {'Color'}
 	css_function_parser = function(line, i)
 		local prefix = CSS_FUNCTION_TRIE:longest_prefix(line:sub(i))
 		if prefix then
@@ -301,6 +320,12 @@ do
 		local prefix = HSL_FUNCTION_TRIE:longest_prefix(line:sub(i))
 		if prefix then
 			return css_fn[prefix](line, i)
+		end
+	end
+	glua_function_parser = function(line, i)
+		local prefix = GLUA_FUNCTION_TRIE:longest_prefix(line:sub(i))
+		if prefix then
+			return glua_fn[prefix](line, i)
 		end
 	end
 end
@@ -379,6 +404,7 @@ local function make_matcher(options)
 	local enable_RRGGBBAA = options.css or options.RRGGBBAA
 	local enable_rgb      = options.css or options.css_fns or options.rgb_fn
 	local enable_hsl      = options.css or options.css_fns or options.hsl_fn
+	local enable_glua     = options.glua
 
 	local matcher_key = bor(
 		lshift(enable_names    and 1 or 0, 0),
@@ -386,7 +412,8 @@ local function make_matcher(options)
 		lshift(enable_RRGGBB   and 1 or 0, 2),
 		lshift(enable_RRGGBBAA and 1 or 0, 3),
 		lshift(enable_rgb      and 1 or 0, 4),
-		lshift(enable_hsl      and 1 or 0, 5))
+		lshift(enable_hsl      and 1 or 0, 5),
+		lshift(enable_glua     and 1 or 0, 6))
 
 	if matcher_key == 0 then return end
 
@@ -423,6 +450,8 @@ local function make_matcher(options)
 		table.insert(loop_matchers, rgb_function_parser)
 	elseif enable_hsl then
 		table.insert(loop_matchers, hsl_function_parser)
+	elseif enable_glua then
+		table.insert(loop_matchers, glua_function_parser)
 	end
 	loop_parse_fn = compile_matcher(loop_matchers)
 	MATCHER_CACHE[matcher_key] = loop_parse_fn
