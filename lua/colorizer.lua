@@ -287,7 +287,7 @@ do
 	local GLUA_COLOR_FN_MINIMUM_LENGTH = #'Color(0,0,0)' - 1
   function glua_fn.Color(line, i)
 		if #line < i + GLUA_COLOR_FN_MINIMUM_LENGTH then return end
-		local r, g, b, match_end = line:sub(i):match("^Color%(%s*(%d+%%?)%s*,%s*(%d+%%?)%s*,%s*(%d+%%?)%s*%),%s*([.%d]+)%s*%)()")
+		local r, g, b, match_end = line:sub(i):match("^Color%(%s*(%d+%%?)%s*,%s*(%d+%%?)%s*,%s*(%d+%%?)%s*,%s*([.%d]+)%s*%)()")
 		if not match_end then return end
 		r = percent_or_hex(r) if not r then return end
 		g = percent_or_hex(g) if not g then return end
